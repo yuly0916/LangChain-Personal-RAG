@@ -1,8 +1,17 @@
 import { HiOutlineLightBulb } from "react-icons/hi";
 import "./Home.css";
+import api from "../api";
+import { useEffect } from "react";
 
 function Home() {
-
+  const test = async () => {
+    const res = await api.get('/test');
+    console.log(res);
+    
+  }
+  useEffect(()=>{
+    test();
+  },[])
   return (
     <div className="home-container">
       {/* Animated Background */}
