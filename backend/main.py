@@ -28,7 +28,7 @@ app.include_router(chat)
 app.include_router(admin)
 app.include_router(web)
 
-@app.get('/test')
+@app.get('/api/test')
 def test():
     return True
 
