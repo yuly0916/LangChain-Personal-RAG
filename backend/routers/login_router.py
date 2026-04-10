@@ -12,7 +12,7 @@ from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException
 import os
 
-login = APIRouter()
+login = APIRouter(prefix="/api")
 SECRET_KEY = os.environ.get('SECRET_KEY')
 ALGORITHM = os.environ.get('ALGORITHM')
 REDIRECT_URI = os.environ.get('REDIRECT_URI')
