@@ -4,7 +4,10 @@ python-dotenv
 langchain
 langchain-core
 langchain-openai
+langchain-text-splitters
 openai
 pymongo
 numpy
 sqlalchemy
+python-multipart
+python-jose[cryptography]
