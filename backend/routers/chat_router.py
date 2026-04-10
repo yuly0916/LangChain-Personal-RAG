@@ -31,3 +31,4 @@ def get_history(db=Depends(get_db), user=Depends(get_current_user)):# 토큰 (�
     hi:Cursor =  col.find({"user_k_id":str(user["user_k_id"])},{"content": 1, "role": 1, "_id":0}).sort("timestamp",-1)
     return list(hi)
 
+# 깃허브 액션 테스트
