@@ -21,7 +21,7 @@ CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
 LOGIN_SUCCESS_PAGE = os.environ.get('LOGIN_SUCCESS_PAGE')
 
 
-def create_token(name, profile_img, kakao_user_id):
+def create_token(name, profile_img, kakao_user_id, role="user"):
     """
     티켓 발행 하는 함수
     """
@@ -29,6 +29,7 @@ def create_token(name, profile_img, kakao_user_id):
         "name": name,
         "profile_img": profile_img,
         "user_k_id": kakao_user_id,
+        "role": role,
         "exp": datetime.datetime.now() + datetime.timedelta(hours=1),
         "iat": datetime.datetime.now()
     }
@@ -77,16 +78,23 @@ def kakao_login_redirect(db=Depends(get_db), code: str | None = None, error: str
         # Step 3
         # DB 입출력, 토큰 생성 부분
         user_col:Collection = db["user"]
-        user = user_col.find_one({"user_k_id": user_infor.get("id")},{"_id":0,"name":1,"profile_img":1,"user_k_id":1})
+        user = user_col.find_one({"user_k_id": user_infor.get("id")},{"_id":0,"name":1,"profile_img":1,"user_k_id":1,"role":1})
         if user is None:
             print("유저가 존재하지 않아 회원가입을 진행합니다. : ",user)
             user = {
                 "name": user_detail.get("nickname"),
                 "profile_img": user_detail.get("profile_image"),
-                "user_k_id": user_infor.get("id")
+                "user_k_id": user_infor.get("id"),
+                "role": "user"
             }
             user_col.insert_one(user)
-        token = create_token(user.get("nickname"), user.get("profile_image"), user.get("user_k_id"))
+            
+        token = create_token(
+            name=user.get("name") or user_detail.get("nickname"), 
+            profile_img=user.get("profile_img") or user_detail.get("profile_image"), 
+            kakao_user_id=user.get("user_k_id"),
+            role=user.get("role", "user")
+        )
         # --end
 
         #Step4

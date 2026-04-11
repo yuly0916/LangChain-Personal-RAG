@@ -1,92 +1,99 @@
-# LangChain RAG AI Web Application
+# 🪄 LangChain RAG AI Web Application (Luxury Earth Tone Edition)
 
-이 프로젝트는 LangChain과 OpenAI의 언어 모델을 활용하여 데이터 기반 질문에 응답할 수 있는 **RAG (Retrieval-Augmented Generation)** 기반의 AI 채팅 웹 애플리케이션입니다. React 기반의 프론트엔드 모델과 FastAPI로 구축된 백엔드로 구성된 풀스택 웹 앱입니다.
+이 프로젝트는 LangChain과 OpenAI의 언어 모델을 결합하여 데이터 기반 질문에 논리적으로 응답하는 **RAG (Retrieval-Augmented Generation) 기반의 풀스택 AI 채팅 웹 애플리케이션**입니다. 
+
+---
 
 ## 🛠️ 기술 스택 (Tech Stack)
 
-### **Backend**
-*   **Framework**: FastAPI, Uvicorn (포트: `8000`)
-*   **AI/LLM**: LangChain, OpenAI (`gpt-4.1-nano`, `text-embedding-3-small`)
-*   **Database**: MongoDB (`pymongo`, 데이터베이스명: `aichat`, 포트: `27017`)
-*   **Other Libraries**: `numpy` (코사인 유사도 연산 로직 등), `python-dotenv`, `starlette` (CORS)
-
 ### **Frontend**
-*   **Framework**: React 19 (개발 환경: Vite, 포트: `5173`)
-*   **Routing**: `react-router-dom`
+*   **Framework**: React 19 (Vite 번들러, 기본 포트: `5173`)
+*   **Routing & Auth**: `react-router-dom`, `jwt-decode`, Custom Protected Routes
+*   **UI/UX**: 
+    *   순수 CSS Variables 기반
+    *   커스텀 팝업 모달 체계 (native window.alert/prompt/confirm 완벽 대체)
+*   **Markdown Parsing**: `react-markdown`, `remark-gfm`
 *   **API 통신**: `axios`
-*   **기타 라이브러리**: `react-icons`
+
+### **Backend**
+*   **Framework**: FastAPI, Uvicorn (기본 포트: `8000`)
+*   **AI/LLM Core**: LangChain, OpenAI (`gpt-4.1-nano`, `text-embedding-3-small`)
+*   **Database**: MongoDB (비동기 Motor/Pymongo 연동, 포트: `27017`)
+*   **Security**: JWT 기반 인증 체계 (OAuth2PasswordBearer)
 
 ---
 
-## ✨ 주요 기능 (Features)
+## ✨ 핵심 기능 (Key Features)
 
-1.  **사용자 대화 기반 RAG 검색**:
-    *   사용자의 텍스트 데이터를 받아 OpenAI `text-embedding-3-small`을 통해 벡터값으로 임베딩(Embedding)합니다.
-    *   Numpy를 활용하여 MongoDB에 저장된 기존 문서들 중 코사인 유사도(Cosine Similarity)를 통해 사용자 질문과 관련성이 가장 높은 문서(Top-K)를 추출합니다.
-    *   추출된 문서를 바탕으로 LangChain의 프롬프트 템플릿(PromptTemplate)을 구성하여 `gpt-4.1-nano` 모델에게 컨텍스트가 포함된 높은 정확도의 텍스트 응답을 기대합니다.
-2.  **대화 기록(Chat History) 저장**:
-    *   유저의 질문과 AI의 응답 내용, 그에 상응하는 벡터값을 DB에 저장하여 추후 대화 내역 조회 및 히스토리를 데이터로 쓸 수 있게 구축되어 있습니다.
-3.  **도메인별 라우터 아키텍처**:
-    *   단순한 서버 구성을 넘어 `login`, `chat`, `admin`, `web` 형태의 여러 도메인별 라우터로 모듈화하여 관리 및 유지 보수의 효율성을 높였습니다.
+### 1. 🤖 지능형 RAG 문서 검색 체계
+*   **고성능 임베딩**: 사용자의 텍스트를 `text-embedding-3-small`로 임베딩하여 Numpy를 활용한 코사인 유사도 연산으로 가장 관련성 높은 문서를 즉시 찾습니다.
+*   **컨텍스트 융합 답변**: 검색된 문서를 바탕으로 프롬프트 템플릿(Prompt Template)을 엮어 `gpt-4.1-nano`가 높은 도메인 정확도를 가진 응답을 반환합니다.
+
+### 2. 🎨 UI/UX & 마크다운 렌더링
+*   **자연스러운 스크롤 (Infinite Scroll)**: 최신 상용 메신저(카카오톡 등)와 동일하게, 화면 최상단 도달 시 과거 대화를 시야 끊김 없이 자연스럽게 프리페치(Prefetching) 해옵니다.
+*   **완벽한 마크다운 지원**: AI가 전송하는 볼드체, 테이블, 리스트 등의 마크다운 포맷팅 텍스트가 깨지지 않고 채팅창에 예쁘게 파싱(`react-markdown`)되어 출력됩니다.
+
+### 3. 🛡️ 완벽한 RBAC 보안 통제 (Role-Based Access Control)
+*   가입 시 기본적으로 `user` 권한이 부여되며, 쿠키(JWT 토큰)의 `role` 값을 기반으로 프론트엔드 라우터 가드(`ProtectedRoute.jsx`)가 작동합니다.
+*   일반 유저가 어드민 라우트(`/admin`)로 무단 침입을 시도할 경우, 단순 403 에러가 아닌 전용 `NotFound (404)` 페이지로 돌려보내어 시스템 구조(경로)를 완벽히 숨깁니다.
+*   백엔드 API(`api/admin/*`) 레벨에서도 JWT 의존성 주입을 통해 악의적인 다이렉트 API 호출을 원천 차단합니다.
+
+### 4. 👑 탭(Tab) 기반 관리자 대시보드 (Admin Panel)
+*   **모델 업로드**: 새로운 AI 모델 이름, 성격 및 학습 데이터 파일(.txt, .pdf)을 서버에 업로드합니다.
+*   **모델 관리 (CRUD)**: 현재 활성화된 AI 모델 리스트를 조회하고, 세련된 커스텀 모달 오버레이를 통해 이름 재설정(Update)과 폐기(Delete)를 수행합니다.
+*   **유저 권한 관리**: 가입된 사용자 목록을 표시하고, 직관적인 `<select>` 박스를 통해 즉석에서 일반 유저(`user`)를 플랫폼 최고 관리자(`admin`)로 승격시킬 수 있습니다.
 
 ---
 
-## 🚀 설치 및 실행 방법 (Getting Started)
+## 🚀 설치 및 가동 가이드 (Getting Started)
 
-프로젝트를 로컬 환경에서 실행하려면 프론트엔드, 백엔드 서버 및 Database(MongoDB)가 모두 동작해야 합니다.
+프로젝트를 구동하기 위해선 백엔드(FastAPI), 프론트엔드(React), 그리고 MongoDB 데몬이 동작 중이어야 합니다.
 
-### 1. MongoDB 설정
-* 로컬 `27017` 포트에 MongoDB가 설치되어 실행 중이어야 합니다.
-* 벡터(Vector)와 텍스트(Text) 데이터를 저장할 로컬 데이터베이스(`aichat`)를 필요로 합니다.
+### 1. MongoDB 구동
+*   로컬 혹은 원격망에 MongoDB가 `27017` 포트로 띄워져 있어야 합니다.
+*   벡터 데이터와 유저 정보가 저장될 `aichat` 데이터베이스를 필요로 합니다.
 
 ### 2. 환경 변수 설정 (.env)
-백엔드 폴더(`backend/`) 내에 `.env` 파일을 생성하거나 수정하여 필수 환경변수를 설정합니다. OpenAI 모델 사용에 필요한 키가 요구됩니다.
+`backend/` 폴더 내에 `.env` 파일을 구성하여 OpenAI API 키를 연결해 줍니다.
 ```env
-OPENAI_API_KEY="sk-..."
+OPENAI_API_KEY="sk-여러분들의-OPENAI-키를-입력하세요"
 ```
 
-### 3. Backend (FastAPI 서버) 실행
-Python 환경이 구성되어있어야 동작합니다. 가상 환경 위에서 구동하는 것을 추천합니다.
-
+### 3. Backend (API 서버) 기동
+가능하면 가상 환경(Virtualenv 등) 위에서 패키지를 설치하신 후 서버를 구동하십시오.
 ```bash
 cd backend
-
-# 의존성 패키지 설치 (requirements.txt 활용)
 pip install -r requirements.txt
-
-# 서버 실행 (API 주소: http://127.0.0.1:8000)
 python main.py
 ```
+> 서버가 성공적으로 켜지면 터미널 상에 `http://localhost:8000` 주소가 나타납니다.
 
-### 4. Frontend (React) 실행
-
+### 4. Frontend (Vite) 기동
+Node.js 필수 모듈들을 설치하고 프론트엔드를 실행합니다.
 ```bash
 cd frontend
-
-# 의존성 패키지 설치
 npm install
-
-# 개발용 테스트 프론트 프록시 서버 실행 (기본 포트: http://127.0.0.1:5173)
 npm run dev
 ```
+> 브라우저를 열고 터미널에 표시된 `http://localhost:5173` 으로 접속하시면 즉시 럭셔리 채팅 UI와 만나실 수 있습니다!
 
 ---
 
-## 📂 주요 구조 (Directory Structure)
+## 📂 아키텍처 개요 (Directory Structure)
 
 ```text
 LangChain-RAG/
-├── backend/                  # FastAPI 기반의 백엔드 서버
-│   ├── routers/              # API 라우팅 파일 (admin, chat, login, web 등)
-│   ├── services/             # 비즈니스 로직 및 RAG 벡터 검색 로직 (chat_service.py 등)
-│   ├── main.py               # 백엔드 서버 애플리케이션 진입점 (CORS 미들웨어 적용 포함)
-│   ├── db.py                 # MongoDB 데이터베이스 연결 헬퍼 함수
-│   ├── common.py             # 공통 유틸리티 (timing 데코레이터 등)
-│   └── requirements.txt      # 파이썬 의존성 패키지 목록
-├── frontend/                 # React (Vite) 프론트엔드 웹 SPA
-│   ├── public/             
-│   ├── src/                  # 프론트 화면 및 컴포넌트 (App.jsx, /page 등)
-│   ├── package.json          # NPM 패키지 목록
-│   └── vite.config.js        # Vite 번들러 설정
-└── README.md
+├── backend/                  
+│   ├── routers/              # 도메인별 분리된 API 라우터 (admin, chat, login)
+│   ├── services/             # RAG 및 Numpy 코사인 유사도 벡터 연산 비즈니스 계층
+│   ├── main.py               # FastAPI 통합 진입점 및 CORS 인증 미들웨어
+│   └── common.py             # 실행 속도 타이밍 계측 데코레이터 등 유틸 모음
+├── frontend/                 
+│   ├── src/
+│   │   ├── components/       # ProtectedRoute 등 글로벌 공유 컴포넌트
+│   │   ├── page/             # Home(채팅창), Admin(대시보드), NotFound 뷰 집합
+│   │   ├── api.js            # 백엔드 연동 통신망 (axios base 인스턴스)
+│   │   └── App.jsx           # 리액트 다이내믹 통합 라우터 (RBAC 가드 내장)
+│   └── package.json          
+└── README.md                 # 본 가이드라인
 ```
