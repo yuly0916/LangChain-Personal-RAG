@@ -1,13 +1,12 @@
 from datetime import datetime
 
-from langchain_core.messages import BaseMessage, AIMessage
-from openai import embeddings
+from langchain_core.messages import AIMessage
+
 from pymongo.synchronous.collection import Collection
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 import numpy as np
-from pymongo.synchronous.cursor import Cursor
-from sqlalchemy import true
+
 
 from common import timing
 
@@ -30,7 +29,7 @@ class ChatService:
         return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
     @timing
-    def vector_search(self, embedded_text:list[float], data:Collection, limit:int)->list[str]:
+    def vector_search(self, embedded_text:list[float], model_name:str, data:Collection, limit:int)->list[str]:
         """
         벡터DB에 임베딩된 텍스트로 유사도 검색을 수행하는 함수
         :param limit: 유사도 기반 순위 n개
@@ -38,7 +37,10 @@ class ChatService:
         :param data: data 컬렉션
         :return: 유사도 검색 결과 값 (일반 텍스트)
         """
-        data_doc = list(data.find({}, {"text":1, "vector_text":1}))
+        print(model_name)
+        data_doc = list(data.find({"model":model_name}, {"text":1, "vector_text":1, "model":1}))
+        for d in data_doc:
+            print(d["model"])
         query_vec = np.array(embedded_text)
         results = []
         for doc in data_doc:
@@ -78,12 +80,13 @@ class ChatService:
         :param vector_search_result: 벡터 유사도 검색 결과
         :return: 프롬프트 객체 (Langchain 객체)
         """
-        template = ChatPromptTemplate.from_messages([("system",""), ("human","이 것은 사용자 질문에 대한 검색 결과입니다. 참고하여 답변하세요.:{vector_search_result}\n 사용자 질문:{q}")])
+        print(vector_search_result)
+        template = ChatPromptTemplate.from_messages([("system","마크다운 문법으로 답변하세요"), ("human","이 것은 사용자 질문에 대한 검색 결과입니다. 참고하여 답변하세요.:{vector_search_result}\n 사용자 질문:{q}")])
         chain = template | self.llm
         return chain.invoke({"vector_search_result":vector_search_result,"q":text})
 
     @timing
-    def insert_db(self,user_id:str, q:str, a:str,  chat:Collection, embedded_text)-> bool:
+    def insert_db(self,user_id:int, q:str, a:str,  chat:Collection, embedded_text, model_name)-> bool:
         """
         사용자 질문과, LLM 응답을 벡터DB에 저장하는 함수
         :param chat: chat_history 컬렉션
@@ -97,6 +100,7 @@ class ChatService:
                 "content": q,
                 "role":"human",
                 "vector_text": embedded_text,
+                "model": model_name,
                 "timestamp": datetime.now()
             }
             chat.insert_one(user_data)
@@ -106,6 +110,7 @@ class ChatService:
                 "content": a,
                 "role": "ai",
                 "vector_text": self.embeddings_model.embed_query(a),
+                "model": model_name,
                 "timestamp": datetime.now()
             }
             chat.insert_one(ai_data)
@@ -114,6 +119,7 @@ class ChatService:
         except Exception as e:
             print(f"저장 실패:{e}")
             return False
-
+    def get_model(self, model:Collection):
+        return model.find({},{"_id":0})
 
 
