@@ -1,6 +1,5 @@
 import uvicorn
 from dotenv import load_dotenv
-from pymongo import MongoClient
 from starlette.middleware.cors import CORSMiddleware
 
 load_dotenv()
@@ -8,7 +7,6 @@ from fastapi import FastAPI
 from routers.admin_router import admin
 from routers.chat_router import chat
 from routers.login_router import login
-from routers.web_router import web
 
 
 app = FastAPI()
@@ -27,12 +25,6 @@ app.add_middleware(
 app.include_router(login)
 app.include_router(chat)
 app.include_router(admin)
-app.include_router(web)
-
-@app.get('/api/test')
-def test():
-    return True
-
 
 if __name__ == '__main__':
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,5 +1,4 @@
 from langchain_core.messages import AIMessage
-from pymongo.synchronous.collection import Collection
 from pymongo.synchronous.cursor import Cursor
 
 from db import get_db
@@ -7,7 +6,6 @@ from fastapi import APIRouter, Depends, Body
 
 from routers.login_router import get_current_user
 from services.chat_service import ChatService
-from langchain_core.prompts import ChatPromptTemplate
 chat = APIRouter(prefix="/api/chat", dependencies=[Depends(get_current_user)])
 service = ChatService()
 
