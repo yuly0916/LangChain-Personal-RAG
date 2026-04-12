@@ -153,10 +153,13 @@
 
 .footer {
   padding: 20px 30px;
+  /* Android 네비게이션바 / iOS 홈 인디케이터에 가려지지 않도록 safe-area 추가 */
+  padding-bottom: max(20px, calc(15px + env(safe-area-inset-bottom)));
   background: rgba(255, 255, 255, 0.4);
   border-top: 1px solid rgba(255, 255, 255, 0.6);
   display: flex;
   gap: 15px;
+  flex-shrink: 0;
 }
 
 .input {

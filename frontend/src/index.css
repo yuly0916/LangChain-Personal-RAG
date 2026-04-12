@@ -19,11 +19,15 @@ html, body {
   color: var(--color-text-main);
   font-family: 'Pretendard', 'Outfit', sans-serif;
   overflow: hidden;
+  /* iOS Safari 바운스 스크롤 방지 */
+  overscroll-behavior: none;
 }
 
 /* Global Reusable Containers */
 .home-container {
+  /* 100vh 폴백 → dvh: 브라우저 UI 제외한 실제 보이는 높이 */
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
   display: flex;
   flex-direction: column;
@@ -34,6 +38,11 @@ html, body {
   position: relative;
   box-sizing: border-box;
   padding: 20px 0;
+  /* iOS 노치 / Android 네비게이션바 safe-area 확보 */
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 /* Generic Glass Card (For NotFound / Login, etc.) */
