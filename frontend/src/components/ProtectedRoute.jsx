@@ -13,7 +13,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!token) {
     // 토큰이 없으면 비로그인 상태이므로 로그인 페이지로 쫓아냅니다.
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   try {
@@ -30,7 +30,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return children;
   } catch (error) {
     console.error('Invalid Token:', error);
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 };
 
