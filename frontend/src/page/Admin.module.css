@@ -1,0 +1,230 @@
+.card {
+  position: relative;
+  z-index: 10;
+  width: 90%;
+  max-width: 1200px;
+  flex: 1;
+  min-height: 0;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  display: flex;
+  overflow: hidden;
+  animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sidebar {
+  width: 250px;
+  background: rgba(255, 255, 255, 0.4);
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+}
+
+.sidebarHeader {
+  padding: 0 25px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebarHeader h2 {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.tab {
+  padding: 15px 25px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: var(--color-text-main);
+}
+
+.activeTab {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--color-primary);
+  border-left-color: var(--color-primary);
+}
+
+.content {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.content h3 {
+  margin-top: 0;
+  color: var(--color-text-main);
+  font-size: 1.6rem;
+  margin-bottom: 30px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+  padding-bottom: 10px;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.formGroup label {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: 0.95rem;
+}
+
+.input {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--color-border);
+  padding: 12px 15px;
+  border-radius: 10px;
+  color: var(--color-text-main);
+  font-size: 1rem;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.input:focus {
+  border-color: var(--color-primary-light);
+  box-shadow: 0 0 0 3px rgba(189, 160, 139, 0.2);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+}
+
+.table th,
+.table td {
+  padding: 15px 20px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.table th {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+}
+
+.table tbody tr { transition: background 0.3s; }
+.table tbody tr:hover { background: rgba(255, 255, 255, 0.8); }
+
+.table td {
+  color: var(--color-text-main);
+  font-weight: 500;
+  vertical-align: middle;
+}
+
+.table td select {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: white;
+  color: var(--color-text-main);
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+/* MOBILE RESPONSIVE MEDIA QUERIES */
+@media (max-width: 768px) {
+  .card {
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    border-radius: 0;
+    border: none;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 10px 0 0;
+    flex-shrink: 0;
+  }
+
+  .sidebarHeader {
+    padding: 0 15px 10px;
+    margin-bottom: 0;
+  }
+
+  .sidebarHeader h2 {
+    font-size: 1.2rem;
+  }
+  
+  .tabsContainer {
+    display: flex;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
+  }
+
+  .tab {
+    padding: 12px 20px;
+    border-left: none;
+    border-bottom: 4px solid transparent;
+  }
+
+  .activeTab {
+    border-left-color: transparent;
+    border-bottom-color: var(--color-primary);
+  }
+
+  .content {
+    padding: 20px 15px;
+  }
+
+  .content h3 {
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+  }
+
+  .table th, .table td {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .actionBtns {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .actionBtns button {
+    width: 100%;
+    margin: 0 !important;
+  }
+}

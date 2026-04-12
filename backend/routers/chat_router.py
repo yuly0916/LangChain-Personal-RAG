@@ -16,10 +16,9 @@ service = ChatService()
 def chatting(model_name:str, text: str=Body(...), db=Depends(get_db), user=Depends(get_current_user)):
 
     embedded_text:list[float] = service.embed(text)
-    vector_search_result:list[str] = service.vector_search(embedded_text, model_name, db['data'], limit=10)  # 조건 없이 다
-    # chat_history = service.vector_search_chat_history(user_k_id,embedded_text, db['chat_history'], limit=10) # 유저 것만 조건
+    vector_search_result:list[str] = service.vector_search(embedded_text, model_name, db['data'], limit=10)
 
-    response:AIMessage = service.send_to_model(text, vector_search_result)
+    response:AIMessage = service.send_to_model(text, vector_search_result, model_name)
 
     service.insert_db(user["user_k_id"], text, response.text,  db['chat_history'], embedded_text, model_name)
     return response

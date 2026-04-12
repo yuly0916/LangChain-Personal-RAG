@@ -37,10 +37,7 @@ class ChatService:
         :param data: data 컬렉션
         :return: 유사도 검색 결과 값 (일반 텍스트)
         """
-        print(model_name)
         data_doc = list(data.find({"model":model_name}, {"text":1, "vector_text":1, "model":1}))
-        for d in data_doc:
-            print(d["model"])
         query_vec = np.array(embedded_text)
         results = []
         for doc in data_doc:
@@ -73,17 +70,38 @@ class ChatService:
         return top
 
     @timing
-    def send_to_model(self, text:str, vector_search_result:list[str]) -> AIMessage:
+    def send_to_model(
+        self,
+        text: str,
+        vector_search_result: list[tuple[str, float]],
+        model_description: str = "",
+    ) -> AIMessage:
         """
-        사용자 질문과, 유사도 검색 결과로 LLM에게 전달할 프롬프트를 만드는 함수
-        :param text: 시용자 질문
-        :param vector_search_result: 벡터 유사도 검색 결과
-        :return: 프롬프트 객체 (Langchain 객체)
+        사용자 질문과 유사도 검색 결과로 LLM에게 전달할 프롬프트를 만드는 함수.
+        시스템 프롬프트를 통해 모델 범위 외 질문에 대한 안내를 LLM이 직접 처리합니다.
+
+        :param text: 사용자 질문
+        :param vector_search_result: 벡터 유사도 검색 결과 [(text, score), ...]
+        :param model_description: 모델 설명 (시스템 프롬프트 페르소나 설정용)
+        :return: AIMessage
         """
-        print(vector_search_result)
-        template = ChatPromptTemplate.from_messages([("system","마크다운 문법으로 답변하세요"), ("human","이 것은 사용자 질문에 대한 검색 결과입니다. 참고하여 답변하세요.:{vector_search_result}\n 사용자 질문:{q}")])
+        system_prompt = (
+            "마크다운 문법으로 답변하세요.\n"
+            f"당신은 다음 설명에 해당하는 전문 AI입니다: {model_description}\n"
+            "위에서 안내한 당신의 전문 분야와 전혀 다른 질문이라고 생각이 든다면, 답변을 거부하세요."
+        )
+
+        context_texts = [item[0] for item in vector_search_result]
+        template = ChatPromptTemplate.from_messages([
+            ("system", system_prompt),
+            ("human",
+             "다음은 사용자 질문에 대한 관련 검색 결과입니다. 참고하여 답변하세요:\n"
+             "{vector_search_result}\n\n"
+             "사용자 질문: {q}")
+        ])
         chain = template | self.llm
-        return chain.invoke({"vector_search_result":vector_search_result,"q":text})
+        return chain.invoke({"vector_search_result": context_texts, "q": text})
+
 
     @timing
     def insert_db(self,user_id:int, q:str, a:str,  chat:Collection, embedded_text, model_name)-> bool:
