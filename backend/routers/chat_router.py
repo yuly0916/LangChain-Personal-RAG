@@ -12,12 +12,25 @@ service = ChatService()
 
 @chat.post("")
 def chatting(model_name:str, text: str=Body(...), db=Depends(get_db), user=Depends(get_current_user)):
-
+    user_k_id = user["user_k_id"]
+    history_col = db["chat_history"]
     embedded_text:list[float] = service.embed(text)
-    vector_search_result:list[str] = service.vector_search(embedded_text, model_name, db['data'], limit=10)
-
-    response:AIMessage = service.send_to_model(text, vector_search_result, model_name)
-
+    chat_history_vector_search_result:list[set] = service.vector_search_chat_history(
+        user_k_id=user_k_id,
+        embed_query=embedded_text,
+        chat_history=history_col,
+        limit=20
+    )
+    chat_history_top: list[str] = service.get_chat_history_top(user_k_id, history_col)
+    data_vector_search_result:list[str] = service.vector_search(embedded_text, model_name, db['data'], limit=10)
+    response:AIMessage = service.send_to_model(
+        text,
+        data_vector_search_result,
+        chat_history_vector_search_result,
+        chat_history_top,
+        model_name
+    )
+    #
     service.insert_db(user["user_k_id"], text, response.text,  db['chat_history'], embedded_text, model_name)
     return response
 
@@ -32,3 +45,4 @@ def get_history(page: int = 1, limit: int = 10, db=Depends(get_db), user=Depends
 @chat.get("/models")
 def get_models(db=Depends(get_db)):
     return list(service.get_model(db["model"]))
+

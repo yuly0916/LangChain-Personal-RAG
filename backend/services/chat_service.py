@@ -49,7 +49,7 @@ class ChatService:
         return top
 
     @timing
-    def vector_search_chat_history(self,user_k_id,embedded_text, data:Collection, limit:int):
+    def vector_search_chat_history(self,user_k_id, embed_query, chat_history:Collection, limit:int)->list[set]:
         """
         개발중 유저 챗 히스토리 RAG검색 : 위 vector_search() 함수랑 기능이 동일하여 통합 가능성 높음
         :param embedded_text:
@@ -58,22 +58,29 @@ class ChatService:
         :param user_k_id:
         :return:
         """
-        data_doc = list(data.find({"user_k_id": user_k_id}))
-        query_vec = np.array(embedded_text)
+        # content: str,
+        # role: str,
+        # vector_text: list[float]
+        data_doc:list[dict] = list(chat_history.find({"user_k_id": user_k_id},{"_id":0,"user_k_id":0,"model":0,"timestamp":0}).sort([("timestamp", -1), ("_id", -1)]))
+
+        # query_vec = np.array(embedded_text)
         results = []
         for doc in data_doc:
             emb = np.array(doc["vector_text"])
-            score = self._cosine_similarity(query_vec, emb)
-            results.append((doc["text"], score))
+            score = self._cosine_similarity(embed_query, emb)
+            results.append((f"({doc["role"]}의 대화 기록입니다.\n 내용:{doc["content"]})", score))
         results.sort(key=lambda x: x[1], reverse=True)
         top = results[:limit]
         return top
+    # 답변이나 질문이 비슷하면 chat_history 에서 백터 텍스트 검사해서 전에 했던 내용 3개 정도
 
     @timing
     def send_to_model(
         self,
         text: str,
-        vector_search_result: list[tuple[str, float]],
+        data_vector_search_result: list[str],
+        chat_history_vector_search_result: list[set],
+        chat_history_top: list[str],
         model_description: str = "",
     ) -> AIMessage:
         """
@@ -81,27 +88,32 @@ class ChatService:
         시스템 프롬프트를 통해 모델 범위 외 질문에 대한 안내를 LLM이 직접 처리합니다.
 
         :param text: 사용자 질문
-        :param vector_search_result: 벡터 유사도 검색 결과 [(text, score), ...]
+        :param data_vector_search_result: RAG 전문 기술 벡터 유사도 검색 결과 [(text, score), ...]
+        :param chat_history_vector_search_result: RAG 사용자 대화 벡터 유사도 검색 결과
+        :param chat_history_top: 사용자 대화중 최신 10개
         :param model_description: 모델 설명 (시스템 프롬프트 페르소나 설정용)
         :return: AIMessage
         """
         system_prompt = (
             "마크다운 문법으로 답변하세요.\n"
             f"당신은 다음 설명에 해당하는 전문 AI입니다: {model_description}\n"
-            "위에서 안내한 당신의 전문 분야와 전혀 다른 질문이라고 생각이 든다면, 답변을 거부하세요."
+            # "위에서 안내한 당신의 전문 분야와 전혀 다른 질문이라고 생각이 든다면, 답변을 거부하세요."
         )
 
-        context_texts = [item[0] for item in vector_search_result]
+        context_texts = [item[0] for item in data_vector_search_result]
         template = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
             ("human",
              "다음은 사용자 질문에 대한 관련 검색 결과입니다. 참고하여 답변하세요:\n"
-             "{vector_search_result}\n\n"
+             "{data_vector_search_result}\n\n"
+             "다음은 사용자와 이전에 했던 대화 내용 중 관련이 높은 대화 내용 검색입니다. 참고하여 답변하세요.\n"
+             "{chat_history_vector_search_result}\n\n"
+             "다음은 사용자와 이 대화 직전에 했던 대화들입니다. 참고하여 답변하세요."
+             "{chat_history_top}\n\n"
              "사용자 질문: {q}")
         ])
         chain = template | self.llm
-        return chain.invoke({"vector_search_result": context_texts, "q": text})
-
+        return chain.invoke({"data_vector_search_result": context_texts, "chat_history_vector_search_result":chat_history_vector_search_result,"chat_history_top": chat_history_top, "q": text})
 
     @timing
     def insert_db(self,user_id:int, q:str, a:str,  chat:Collection, embedded_text, model_name)-> bool:
@@ -139,5 +151,13 @@ class ChatService:
             return False
     def get_model(self, model:Collection):
         return model.find({},{"_id":0})
+
+    def get_chat_history_top(self, user_k_id, history_col:Collection) -> list[str]:
+        chats = history_col.find({"user_k_id": user_k_id}, {"content": 1, "role": 1, "_id": 0}).sort(
+            [("timestamp", -1), ("_id", -1)]).limit(10)
+        result: list[str] = []
+        for chat in chats:
+            result.append(f"({chat["role"]}의 대화 기록입니다.\n 내용:{chat["content"]})")
+        return result
 
 
