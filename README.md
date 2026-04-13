@@ -1,4 +1,4 @@
-# 🪄 LangChain RAG AI Web Application (Luxury Earth Tone Edition)
+# 🪄 LangChain RAG AI Web Application 
 
 이 프로젝트는 LangChain과 OpenAI의 언어 모델을 결합하여 데이터 기반 질문에 논리적으로 응답하는 **RAG (Retrieval-Augmented Generation) 기반의 풀스택 AI 채팅 웹 애플리케이션**입니다. 
 
