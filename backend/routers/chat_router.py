@@ -14,6 +14,10 @@ service = ChatService()
 def chatting(model_name:str, text: str=Body(...), db=Depends(get_db), user=Depends(get_current_user)):
     user_k_id = user["user_k_id"]
     history_col = db["chat_history"]
+    model_doc = db["model"].find_one(
+        {"name":model_name},
+        {"_id":0, "name": 1, "description":1}
+    )
     embedded_text:list[float] = service.embed(text)
     chat_history_vector_search_result:list[set] = service.vector_search_chat_history(
         user_k_id=user_k_id,
@@ -28,7 +32,7 @@ def chatting(model_name:str, text: str=Body(...), db=Depends(get_db), user=Depen
         data_vector_search_result,
         chat_history_vector_search_result,
         chat_history_top,
-        model_name
+        model_doc.get("description", "")
     )
     #
     service.insert_db(user["user_k_id"], text, response.text,  db['chat_history'], embedded_text, model_name)

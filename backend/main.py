@@ -12,7 +12,7 @@ from routers.login_router import login
 app = FastAPI()
 
 origin = [
-    "http://localhost:5173"
+    "http://yelria.co.kr"
 ]
 app.add_middleware(
     CORSMiddleware,

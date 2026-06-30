@@ -33,10 +33,66 @@ def get_users_infor(db: Database = Depends(get_db)):
     users = service.get_users(user=db["user"])
     return users
 
-@admin.put("/users/{user_k_id}/role")
-def update_role(user_k_id:int, role:str=Body(..., embed=True),db:Database = Depends(get_db), admin_user:dict = Depends(get_users_infor)):
+@admin.put("/models/{model_name}")
+def update_role(model_name: str, body:dict = Body(...),db:Database = Depends(get_db), admin_user:dict = Depends(get_users_infor)):
     # 업데이트 할 정보를 디비에 다시 넣기
-    update = db["user"]
-    update.update_one({'user_k_id':user_k_id},{'$set':{'role':role}})
+    new_name = body.get("model_name")
+    new_name = new_name.strip()
 
+    if new_name == model_name:
+        return{
+            "messege":"변경된 내용이 없습니다.",
+            "old_name": model_name,
+            "new_name": new_name
+        }
+    same_name_model = db["model"].find_one({"name": new_name})
+
+    if same_name_model:
+        raise HTTPException(status_code=409, detail="이미 같은 이름의 모델이 존재합니다.")
+
+    result = db["model"].update_one(
+        {"name": model_name},
+        {"$set":{"name":new_name}}
+    )
+
+    if result.matched_count == 0:
+        raise  HTTPException(staus_code=404, detail="해당 모델을 찾을 수 없습니다.")
+
+    db["data"].update_many(
+        {"model": model_name},
+        {"$set": {"model": new_name}}
+    )
+
+    db["chat_history"].update_many(
+        {"model": model_name},
+        {"$set": {"model": new_name}}
+    )
+    return {
+        "message": "모델 이름이 수정되었습니다.",
+        "old_name": model_name,
+        "new_name": new_name
+    }
+
+@admin.delete("/models/{model_name}")
+def delete_model(
+    model_name: str,
+    db: Database = Depends(get_db),
+    admin_user: dict = Depends(get_admin_user)
+):
+    model_result = db["model"].delete_one({"name": model_name})
+
+    if model_result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="해당 모델을 찾을 수 없습니다.")
+
+    data_result = db["data"].delete_many({"model": model_name})
+
+    chat_result = db["chat_history"].delete_many({"model": model_name})
+
+    return {
+        "message": "모델이 삭제되었습니다.",
+        "model_name": model_name,
+        "deleted_model_count": model_result.deleted_count,
+        "deleted_data_count": data_result.deleted_count,
+        "deleted_chat_count": chat_result.deleted_count
+    }
 

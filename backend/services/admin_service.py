@@ -29,7 +29,7 @@ class AdminService:
 
     def insert_db_model_collection(self, model_name:str, description:str, model:Collection):
         about_model:dict = {"name": model_name, "description": description}
-        model["model"].insert_one(about_model)
+        model.insert_one(about_model)
 
     def insert_db_data_collection(self, chunks:list[Document], model:str, data:Collection):
         for chunk in chunks:

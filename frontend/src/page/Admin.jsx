@@ -10,6 +10,7 @@ const Admin = () => {
     const [file, setFile] = useState(null);
     const [modelInfor, setModelInfor] = useState({ model_name: '', model_description: '' });
 
+    // 항상 안전하게 빈 배열로 초기화
     const [models, setModels] = useState([]);
     const [users, setUsers] = useState([]);
 
@@ -18,19 +19,31 @@ const Admin = () => {
 
     const fetchModels = async () => {
         try {
-            const res = await api.get('/chat/models');
-            if (res.data) setModels(res.data);
+            const res = await api.get('/api/chat/models');
+            // 응답이 존재하고 배열 형태일 때만 세팅, 아니면 빈 배열로 방어
+            if (res && res.data) {
+                setModels(Array.isArray(res.data) ? res.data : []);
+            } else {
+                setModels([]);
+            }
         } catch (error) {
             console.error("Failed to fetch models", error);
+            setModels([]); 
         }
     }
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get('/admin/users');
-            if (res.data) setUsers(res.data);
+            const res = await api.get('/api/admin/users');
+            // 백엔드가 반환한 데이터가 배열인지 확실하게 검증
+            if (res && res.data) {
+                setUsers(Array.isArray(res.data) ? res.data : []);
+            } else {
+                setUsers([]);
+            }
         } catch (error) {
             console.error("Failed to fetch users", error);
+            setUsers([]); 
         }
     }
 
@@ -47,11 +60,19 @@ const Admin = () => {
     }
 
     const createModel = async () => {
-        if (!file || !modelInfor.model_name) return alert("모델 이름과 파일을 모두 첨부해주세요.");
+        if (!file || !modelInfor.model_name) {
+            return alert("모델 이름과 파일을 모두 첨부해주세요.");
+        }
+
         try {
             const form = new FormData();
             form.append("file", file);
-            await api.post(`/admin/upload?model_name=${modelInfor.model_name}&model_description=${modelInfor.model_description}`, form);
+
+            await api.post(
+                `/api/admin/upload?model_name=${encodeURIComponent(modelInfor.model_name)}&model_description=${encodeURIComponent(modelInfor.model_description)}`,
+                form
+            );
+
             alert("모델 생성이 완료되었습니다.");
             setModelInfor({ model_name: '', model_description: '' });
             setFile(null);
@@ -68,12 +89,12 @@ const Admin = () => {
     const confirmDelete = async () => {
         const { modelName } = deleteModal;
         try {
-            await api.delete(`/admin/models/${modelName}`);
+            await api.delete(`api/admin/models/${encodeURIComponent(modelName)}`);
             alert("삭제되었습니다.");
             fetchModels();
         } catch (e) {
             console.error(e);
-            alert("API 호출 실패 (백엔드 미구현 상태입니다)");
+            alert(e.response?.data?.detail || "모델 삭제에 실패했습니다.");
         } finally {
             setDeleteModal({ isOpen: false, modelName: null });
         }
@@ -86,12 +107,12 @@ const Admin = () => {
             return;
         }
         try {
-            await api.put(`/admin/models/${modelName}`, { model_name: newName });
+            await api.put(`/api/admin/models/${encodeURIComponent(modelName)}`, { model_name: newName.trim() });
             alert("수정되었습니다.");
             fetchModels();
         } catch (e) {
             console.error(e);
-            alert("API 호출 실패 (백엔드 미구현 상태입니다)");
+            alert(e.response?.data?.detail || "모델 수정에 실패했습니다.");
         } finally {
             setUpdateModal({ isOpen: false, modelName: null, newName: "" });
         }
@@ -102,12 +123,12 @@ const Admin = () => {
     // ==========================================
     const updateUserRole = async (userId, newRole) => {
         try {
-            await api.put(`/admin/users/${userId}/role`, { role: newRole });
+            await api.put(`/api/admin/users/${userId}/role`, { role: newRole });
             alert("권한이 변경되었습니다.");
             fetchUsers();
         } catch (e) {
             console.error(e);
-            alert("API 호출 실패 (백엔드 미구현 상태입니다)");
+            alert("API 호출 실패");
         }
     }
 
@@ -187,7 +208,7 @@ const Admin = () => {
                             </div>
                             <div className={styles.formGroup}>
                                 <label>모델 설명</label>
-                                <input className={styles.input} placeholder="어떤 페르소나를 가지나요?" name="model_description" value={modelInfor.model_description} onChange={handleModelInfor} />
+                                <input className={styles.input} placeholder="모델 설명" name="model_description" value={modelInfor.model_description} onChange={handleModelInfor} />
                             </div>
                             <div className={styles.formGroup}>
                                 <label>학습 데이터 파일 (.txt, .pdf 등)</label>
@@ -211,17 +232,18 @@ const Admin = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {models.length === 0 ? (
+                                        {/* 옵셔널 체이닝 및 기본값 지정으로 확실하게 방어 */}
+                                        {(!models || models.length === 0) ? (
                                             <tr><td colSpan="3" style={{ textAlign: "center", padding: "40px", color: "var(--color-text-muted)" }}>현재 폴링된 모델 데이터가 없습니다.</td></tr>
                                         ) : (
                                             models.map((model, idx) => (
                                                 <tr key={idx}>
-                                                    <td>{model.name}</td>
-                                                    <td>{model.description}</td>
+                                                    <td>{model?.name}</td>
+                                                    <td>{model?.description}</td>
                                                     <td>
                                                         <div className={styles.actionBtns}>
-                                                            <button className="primary-btn" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={() => setUpdateModal({ isOpen: true, modelName: model.name, newName: "" })}>수정</button>
-                                                            <button className="danger-btn" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={() => setDeleteModal({ isOpen: true, modelName: model.name })}>삭제</button>
+                                                            <button className="primary-btn" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={() => setUpdateModal({ isOpen: true, modelName: model?.name, newName: "" })}>수정</button>
+                                                            <button className="danger-btn" style={{ padding: '6px 12px', fontSize: '0.85rem' }} onClick={() => setDeleteModal({ isOpen: true, modelName: model?.name })}>삭제</button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -247,17 +269,18 @@ const Admin = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {users.length === 0 ? (
+                                        {/* 옵셔널 체이닝 및 기본값 지정으로 확실하게 방어 */}
+                                        {(!users || users.length === 0) ? (
                                             <tr><td colSpan="3" style={{ textAlign: "center", padding: "40px", color: "var(--color-text-muted)" }}>조회된 유저 데이터가 없습니다. (백엔드 연결 대기)</td></tr>
                                         ) : (
                                             users.map((user, idx) => (
                                                 <tr key={idx}>
-                                                    <td>{user.user_k_id}</td>
-                                                    <td>{user.name}</td>
+                                                    <td>{user?.user_k_id}</td>
+                                                    <td>{user?.name}</td>
                                                     <td>
                                                         <select
-                                                            value={user.role || 'user'}
-                                                            onChange={(e) => updateUserRole(user.user_k_id, e.target.value)}
+                                                            value={user?.role || 'user'}
+                                                            onChange={(e) => updateUserRole(user?.user_k_id, e.target.value)}
                                                         >
                                                             <option value="user">일반 유저 (User)</option>
                                                             <option value="admin">최고 관리자 (Admin)</option>

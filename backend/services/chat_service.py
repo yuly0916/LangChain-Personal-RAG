@@ -58,21 +58,17 @@ class ChatService:
         :param user_k_id:
         :return:
         """
-        # content: str,
-        # role: str,
-        # vector_text: list[float]
+
         data_doc:list[dict] = list(chat_history.find({"user_k_id": user_k_id},{"_id":0,"user_k_id":0,"model":0,"timestamp":0}).sort([("timestamp", -1), ("_id", -1)]))
 
-        # query_vec = np.array(embedded_text)
         results = []
         for doc in data_doc:
             emb = np.array(doc["vector_text"])
             score = self._cosine_similarity(embed_query, emb)
-            results.append((f"({doc["role"]}의 대화 기록입니다.\n 내용:{doc["content"]})", score))
+            results.append((f"({doc['role']}의 대화 기록입니다.\n 내용:{doc['content']})", score))
         results.sort(key=lambda x: x[1], reverse=True)
         top = results[:limit]
         return top
-    # 답변이나 질문이 비슷하면 chat_history 에서 백터 텍스트 검사해서 전에 했던 내용 3개 정도
 
     @timing
     def send_to_model(
@@ -150,14 +146,14 @@ class ChatService:
             print(f"저장 실패:{e}")
             return False
     def get_model(self, model:Collection):
-        return model.find({},{"_id":0})
+        return model.find({},{"_id":0, "name": 1, "description":1})
 
     def get_chat_history_top(self, user_k_id, history_col:Collection) -> list[str]:
         chats = history_col.find({"user_k_id": user_k_id}, {"content": 1, "role": 1, "_id": 0}).sort(
             [("timestamp", -1), ("_id", -1)]).limit(10)
         result: list[str] = []
         for chat in chats:
-            result.append(f"({chat["role"]}의 대화 기록입니다.\n 내용:{chat["content"]})")
+            result.append(f"({chat['role']}의 대화 기록입니다.\n 내용:{chat['content']})")
         return result
 
 
