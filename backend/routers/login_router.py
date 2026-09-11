@@ -10,6 +10,7 @@ from starlette.responses import RedirectResponse
 from db import get_db
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, HTTPException
+from response.dto import User
 import os
 
 login = APIRouter(prefix="/api")
@@ -40,10 +41,20 @@ class KakaoAccessTokenResponseException(Exception):
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+    if token == "test":     # 개발용 테스트 코드
+        payload =   {
+            "name": "진",
+            "profile_img": "http://img1.kakaocdn.net/thumb/R640x640.q70/?fname=http://t1.kakaocdn.net/account_images/default_profile.jpeg",
+            "user_k_id": 4828258961,
+            "role": "admin",
+            "exp": datetime.datetime.now() + datetime.timedelta(hours=1),
+            "iat": datetime.datetime.now()
+        }
+        return User(**payload)
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload
+        return User(**payload)
     except:
         raise HTTPException(status_code=401, detail="Invalid token")
 

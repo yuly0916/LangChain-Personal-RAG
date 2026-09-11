@@ -4,6 +4,7 @@ from langchain_core.documents import Document
 from pymongo.synchronous.database import Database
 
 from db import get_db
+from response.dto import User, InforMessageDto
 
 from services.admin_service import AdminService
 from routers.login_router import get_current_user
@@ -11,19 +12,20 @@ from routers.login_router import get_current_user
 admin = APIRouter(prefix="/api/admin")
 service = AdminService()
 
-def get_admin_user(current_user: dict = Depends(get_current_user)):
-    role = current_user.get("role")
+def get_admin_user(current_user:User = Depends(get_current_user)) ->User:
+    role = current_user.role
     if role != "admin":
         raise HTTPException(status_code=403, detail="어드민 권한이 필요합니다.")
     return current_user
 
-@admin.post("/upload")
-async def upload_file(file: UploadFile, db: Database = Depends(get_db), admin_user: dict = Depends(get_admin_user), model_name:str="이름 없는 모델", model_description: str="설명이 없습니다."):
+@admin.post("/upload",responses={415:{"description":".txt파일을 올려주세요."}})
+async def upload_file(file: UploadFile, db: Database = Depends(get_db), admin_user: dict = Depends(get_admin_user), model_name:str="이름 없는 모델", model_description: str="설명이 없습니다.") -> InforMessageDto:
     if service.check_extension(file.filename):
         text:str = await service.load_file(file)
         chunks:list[Document] = service.chunk_texts(text)
         service.insert_db_model_collection(model_name, model_description,db["model"])
         service.insert_db_data_collection(chunks, model_name, db["data"])
+        return InforMessageDto(message="업로드가 완료되었습니다.")
 
     else:
         raise HTTPException(415, detail=".txt파일을 올려주세요.")
@@ -33,18 +35,14 @@ def get_users_infor(db: Database = Depends(get_db)):
     users = service.get_users(user=db["user"])
     return users
 
-@admin.put("/models/{model_name}")
-def update_role(model_name: str, body:dict = Body(...),db:Database = Depends(get_db), admin_user:dict = Depends(get_users_infor)):
+@admin.put("/models/{model_name}", responses={409:{"description":"이미 같은 이름의 모델이 존재합니다."},404:{"description":"해당 모델을 찾을 수 없습니다."}})
+def update_role(model_name: str, body:dict = Body(...),db:Database = Depends(get_db), admin_user:User = Depends(get_admin_user)) -> InforMessageDto:
     # 업데이트 할 정보를 디비에 다시 넣기
     new_name = body.get("model_name")
     new_name = new_name.strip()
 
     if new_name == model_name:
-        return{
-            "messege":"변경된 내용이 없습니다.",
-            "old_name": model_name,
-            "new_name": new_name
-        }
+        return InforMessageDto(message="변경된 내용이 없습니다.")
     same_name_model = db["model"].find_one({"name": new_name})
 
     if same_name_model:
@@ -67,32 +65,21 @@ def update_role(model_name: str, body:dict = Body(...),db:Database = Depends(get
         {"model": model_name},
         {"$set": {"model": new_name}}
     )
-    return {
-        "message": "모델 이름이 수정되었습니다.",
-        "old_name": model_name,
-        "new_name": new_name
-    }
+    return InforMessageDto(message="모델 이름이 수정되었습니다.")
 
-@admin.delete("/models/{model_name}")
+@admin.delete("/models/{model_name}", responses={404:{"description":"해당 모델을 찾을 수 없습니다."}})
 def delete_model(
     model_name: str,
     db: Database = Depends(get_db),
     admin_user: dict = Depends(get_admin_user)
-):
+) -> InforMessageDto:
     model_result = db["model"].delete_one({"name": model_name})
 
     if model_result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="해당 모델을 찾을 수 없습니다.")
 
-    data_result = db["data"].delete_many({"model": model_name})
+    db["data"].delete_many({"model": model_name})
+    db["chat_history"].delete_many({"model": model_name})
 
-    chat_result = db["chat_history"].delete_many({"model": model_name})
-
-    return {
-        "message": "모델이 삭제되었습니다.",
-        "model_name": model_name,
-        "deleted_model_count": model_result.deleted_count,
-        "deleted_data_count": data_result.deleted_count,
-        "deleted_chat_count": chat_result.deleted_count
-    }
+    return InforMessageDto(message="모델이 삭제되었습니다.")
 

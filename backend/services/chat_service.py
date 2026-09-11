@@ -1,15 +1,17 @@
 from datetime import datetime
 
+from fastapi import HTTPException
 from langchain_core.messages import AIMessage
 
 from pymongo.synchronous.collection import Collection
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 import numpy as np
-
+from pymongo.synchronous.cursor import Cursor
+from pymongo.synchronous.database import Database
 
 from common import timing
-
+from response.dto import ModelDto, User, ChatResponseDto
 
 
 class ChatService:
@@ -17,7 +19,7 @@ class ChatService:
         self.embeddings_model = OpenAIEmbeddings(model="text-embedding-3-small", dimensions=1536)
         self.llm = ChatOpenAI(model="gpt-4.1-nano")
     @timing
-    def embed(self, text: str)->list[float]:
+    def _embed(self, text: str)->list[float]:
         """
         사용자의 질문을 입력받아 임베딩된 텍스트로 변환하는 함수
         :param text: 사용자 질문
@@ -29,7 +31,7 @@ class ChatService:
         return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
     @timing
-    def vector_search(self, embedded_text:list[float], model_name:str, data:Collection, limit:int)->list[str]:
+    def _vector_search(self, embedded_text:list[float], model_name:str, data:Collection, limit:int)->list[str]:
         """
         벡터DB에 임베딩된 텍스트로 유사도 검색을 수행하는 함수
         :param limit: 유사도 기반 순위 n개
@@ -49,7 +51,7 @@ class ChatService:
         return top
 
     @timing
-    def vector_search_chat_history(self,user_k_id, embed_query, chat_history:Collection, limit:int)->list[set]:
+    def _vector_search_chat_history(self,user_k_id, embed_query, chat_history:Collection, limit:int)->list[set]:
         """
         개발중 유저 챗 히스토리 RAG검색 : 위 vector_search() 함수랑 기능이 동일하여 통합 가능성 높음
         :param embedded_text:
@@ -71,11 +73,10 @@ class ChatService:
         return top
 
     @timing
-    def send_to_model(
+    def _send_to_model(
         self,
         text: str,
         data_vector_search_result: list[str],
-        chat_history_vector_search_result: list[set],
         chat_history_top: list[str],
         model_description: str = "",
     ) -> AIMessage:
@@ -102,17 +103,15 @@ class ChatService:
             ("human",
              "다음은 사용자 질문에 대한 관련 검색 결과입니다. 참고하여 답변하세요:\n"
              "{data_vector_search_result}\n\n"
-             "다음은 사용자와 이전에 했던 대화 내용 중 관련이 높은 대화 내용 검색입니다. 참고하여 답변하세요.\n"
-             "{chat_history_vector_search_result}\n\n"
              "다음은 사용자와 이 대화 직전에 했던 대화들입니다. 참고하여 답변하세요."
              "{chat_history_top}\n\n"
              "사용자 질문: {q}")
         ])
         chain = template | self.llm
-        return chain.invoke({"data_vector_search_result": context_texts, "chat_history_vector_search_result":chat_history_vector_search_result,"chat_history_top": chat_history_top, "q": text})
+        return chain.invoke({"data_vector_search_result": context_texts,"chat_history_top": chat_history_top, "q": text})
 
     @timing
-    def insert_db(self,user_id:int, q:str, a:str,  chat:Collection, embedded_text, model_name)-> bool:
+    def _insert_db(self,user_id:int, q:str, a:str,  chat:Collection, embedded_text, model_name)-> bool:
         """
         사용자 질문과, LLM 응답을 벡터DB에 저장하는 함수
         :param chat: chat_history 컬렉션
@@ -145,10 +144,40 @@ class ChatService:
         except Exception as e:
             print(f"저장 실패:{e}")
             return False
-    def get_model(self, model:Collection):
-        return model.find({},{"_id":0, "name": 1, "description":1})
+    def get_model(self, model:Collection) -> list[ModelDto]:
+        model: Cursor =  model.find({},{"_id":0, "name": 1, "description":1})
+        return [ModelDto(**m) for m in model]
 
-    def get_chat_history_top(self, user_k_id, history_col:Collection) -> list[str]:
+    def get_chat(self, page:int, limit:int, db:Database, user:User) -> list[ChatResponseDto]:
+        col:Collection = db["chat_history"]
+        skip = (page - 1) * limit
+        histories: Cursor = col.find({"user_k_id": user.user_k_id}, {"content":1, "role": 1, "_id":0}).sort([("timestamp", -1), ("_id", -1)]).skip(skip).limit(limit)
+        return [ChatResponseDto(**history) for history in histories]
+
+    def post_chat(self, model_name:str, text:str, db:Database, user:User):
+        model_doc:Cursor = db["model"].find_one(
+            {"name":model_name},
+            {"_id":0,"name":1, "description":1}
+        )
+        if model_doc is None:
+            raise HTTPException(status_code=404, detail="모델을 찾을 수 없습니다.")
+        embedded_text: list[float] = self._embed(text)
+
+
+        chat_history_top: list[str] = self._get_chat_history_top(user.user_k_id, db["chat_history"])
+
+        data_vector_search_result: list[str] = self._vector_search(embedded_text, model_name, db['data'], limit=10)
+        response: AIMessage = self._send_to_model(
+            text,
+            data_vector_search_result,
+            chat_history_top,
+            model_doc.get("description", "")
+        )
+        self._insert_db(user.user_k_id, text, response.text, db['chat_history'], embedded_text, model_name)
+        return response
+
+
+    def _get_chat_history_top(self, user_k_id, history_col:Collection) -> list[str]:
         chats = history_col.find({"user_k_id": user_k_id}, {"content": 1, "role": 1, "_id": 0}).sort(
             [("timestamp", -1), ("_id", -1)]).limit(10)
         result: list[str] = []
