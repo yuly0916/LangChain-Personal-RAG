@@ -17,7 +17,7 @@ from response.dto import ModelDto, User, ChatResponseDto
 class ChatService:
     def __init__(self):
         self.embeddings_model = OpenAIEmbeddings(model="text-embedding-3-small", dimensions=1536)
-        self.llm = ChatOpenAI(model="gpt-4.1-nano")
+        self.llm = ChatOpenAI(model="gpt-5-nano")
     @timing
     def _embed(self, text: str)->list[float]:
         """
@@ -27,11 +27,8 @@ class ChatService:
         """
         return self.embeddings_model.embed_query(text)
 
-    def _cosine_similarity(self ,a, b):
-        return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
     @timing
-    def _vector_search(self, embedded_text:list[float], model_name:str, data:Collection, limit:int)->list[str]:
+    def _vector_search(self, embedded_text:list[float], model_name:str, data:Collection, limit:int)->list[dict]:
         """
         벡터DB에 임베딩된 텍스트로 유사도 검색을 수행하는 함수
         :param limit: 유사도 기반 순위 n개
@@ -39,16 +36,29 @@ class ChatService:
         :param data: data 컬렉션
         :return: 유사도 검색 결과 값 (일반 텍스트)
         """
-        data_doc = list(data.find({"model":model_name}, {"text":1, "vector_text":1, "model":1}))
-        query_vec = np.array(embedded_text)
-        results = []
-        for doc in data_doc:
-            emb = np.array(doc["vector_text"])
-            score = self._cosine_similarity(query_vec, emb)
-            results.append((doc["text"], score))
-        results.sort(key=lambda x: x[1], reverse=True)
-        top = results[:limit]
-        return top
+        pipeline = [
+            {
+                "$vectorSearch": {
+                    "index": "vector_index",
+                    "path": "vector_text",
+                    "queryVector": embedded_text,
+                    "numCandidates": 100,
+                    "limit": limit,
+                    "filter": {"model": model_name}
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "text": 1,
+                    "model": 1
+                }
+            }
+        ]
+        result = list(data.aggregate(pipeline))
+        for r in result:
+            print(r)
+        return result
 
     @timing
     def _vector_search_chat_history(self,user_k_id, embed_query, chat_history:Collection, limit:int)->list[set]:
@@ -76,7 +86,7 @@ class ChatService:
     def _send_to_model(
         self,
         text: str,
-        data_vector_search_result: list[str],
+        data_vector_search_result: list[dict],
         chat_history_top: list[str],
         model_description: str = "",
     ) -> AIMessage:
@@ -97,7 +107,7 @@ class ChatService:
             # "위에서 안내한 당신의 전문 분야와 전혀 다른 질문이라고 생각이 든다면, 답변을 거부하세요."
         )
 
-        context_texts = [item[0] for item in data_vector_search_result]
+        context_texts = [item.get("text") for item in data_vector_search_result]
         template = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
             ("human",
@@ -166,7 +176,7 @@ class ChatService:
 
         chat_history_top: list[str] = self._get_chat_history_top(user.user_k_id, db["chat_history"])
 
-        data_vector_search_result: list[str] = self._vector_search(embedded_text, model_name, db['data'], limit=10)
+        data_vector_search_result: list[dict] = self._vector_search(embedded_text, model_name, db['data'], limit=10)
         response: AIMessage = self._send_to_model(
             text,
             data_vector_search_result,
@@ -184,5 +194,6 @@ class ChatService:
         for chat in chats:
             result.append(f"({chat['role']}의 대화 기록입니다.\n 내용:{chat['content']})")
         return result
+
 
 
