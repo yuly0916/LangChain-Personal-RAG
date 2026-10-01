@@ -6,9 +6,10 @@ class ModelDto(BaseModel):
 
 class User(BaseModel):
     name:str
-    profile_img: str
-    user_k_id: int
+    profile_img: str |None
+    user_k_id: int | None
     role: str
+    login_type:int
 
 class ChatResponseDto(BaseModel):
     content: str

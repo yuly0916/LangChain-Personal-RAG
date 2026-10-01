@@ -19,7 +19,7 @@ const Admin = () => {
 
     const fetchModels = async () => {
         try {
-            const res = await api.get('/api/chat/models');
+            const res = await api.get('/chat/models');
             // 응답이 존재하고 배열 형태일 때만 세팅, 아니면 빈 배열로 방어
             if (res && res.data) {
                 setModels(Array.isArray(res.data) ? res.data : []);
@@ -34,7 +34,7 @@ const Admin = () => {
 
     const fetchUsers = async () => {
         try {
-            const res = await api.get('/api/admin/users');
+            const res = await api.get('/admin/users');
             // 백엔드가 반환한 데이터가 배열인지 확실하게 검증
             if (res && res.data) {
                 setUsers(Array.isArray(res.data) ? res.data : []);
@@ -69,7 +69,7 @@ const Admin = () => {
             form.append("file", file);
 
             await api.post(
-                `/api/admin/upload?model_name=${encodeURIComponent(modelInfor.model_name)}&model_description=${encodeURIComponent(modelInfor.model_description)}`,
+                `/admin/upload?model_name=${encodeURIComponent(modelInfor.model_name)}&model_description=${encodeURIComponent(modelInfor.model_description)}`,
                 form
             );
 
@@ -89,7 +89,7 @@ const Admin = () => {
     const confirmDelete = async () => {
         const { modelName } = deleteModal;
         try {
-            await api.delete(`api/admin/models/${encodeURIComponent(modelName)}`);
+            await api.delete(`/admin/models/${encodeURIComponent(modelName)}`);
             alert("삭제되었습니다.");
             fetchModels();
         } catch (e) {
@@ -107,7 +107,7 @@ const Admin = () => {
             return;
         }
         try {
-            await api.put(`/api/admin/models/${encodeURIComponent(modelName)}`, { model_name: newName.trim() });
+            await api.put(`/admin/models/${encodeURIComponent(modelName)}`, { model_name: newName.trim() });
             alert("수정되었습니다.");
             fetchModels();
         } catch (e) {
@@ -123,7 +123,7 @@ const Admin = () => {
     // ==========================================
     const updateUserRole = async (userId, newRole) => {
         try {
-            await api.put(`/api/admin/users/${userId}/role`, { role: newRole });
+            await api.put(`/admin/users/${userId}/role`, { role: newRole });
             alert("권한이 변경되었습니다.");
             fetchUsers();
         } catch (e) {
