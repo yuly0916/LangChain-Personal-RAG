@@ -110,3 +110,95 @@
   font-size: 14px;
   font-weight: 600;
 }
+
+.login-profile-icon {
+  flex-shrink: 0;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 18px;
+  color: #8d7467;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e5dccf;
+}
+
+.guest-login-button {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 20px;
+  box-sizing: border-box;
+  border: 1px solid #c8b7a6;
+  border-radius: 14px;
+  background: #f5efe5;
+  color: #59453a;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.guest-login-button:hover {
+  background: #ebe1d3;
+  border-color: #a78d7e;
+}
+
+.guest-login-button:active {
+  background: #e2d5c5;
+}
+
+.guest-login-button:focus-visible,
+.kakao-login-button:focus-visible {
+  outline: 3px solid #876b5b;
+  outline-offset: 4px;
+}
+
+.guest-login-description {
+  margin: 12px 0 0;
+  text-align: center;
+  color: #806c5e;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 420px) {
+  .login-card {
+    padding: 28px 20px;
+  }
+
+  .login-profile {
+    gap: 12px;
+  }
+
+  .login-profile-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .login-profile h1 {
+    font-size: 24px;
+  }
+
+  .login-profile p {
+    font-size: 15px;
+  }
+
+  .login-message-box p {
+    font-size: 17px;
+  }
+}

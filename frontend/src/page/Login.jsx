@@ -11,6 +11,11 @@ const Login = () => {
 
         window.location.href = `https://kauth.kakao.com/oauth/authorize?${params.toString()}`;
   };
+  const guestLogin = () => {
+    const url = new URL(import.meta.env.VITE_REDIRECT_URI);
+    url.searchParams.set("mode","guest");
+    window.location.href = url.toString();
+};
 
   return (
     <div className="login-page">
@@ -23,18 +28,18 @@ const Login = () => {
           <div>
             <h1>로그인 해주세요!</h1>
             <p>
-              토끼에게 물어보려면
+              궁금한 내용을
               <br />
-              카카오 로그인이 필요해요.
+              편하게 질문해보세요.
             </p>
           </div>
         </div>
 
         <div className="login-message-box">
           <p>
-            로그인 후 서비스를
+            로그인하면 대화를 저장하고
             <br />
-            바로 이용할 수 있어요.
+            다음에도 이어갈 수 있어요.
           </p>
         </div>
 
@@ -48,6 +53,22 @@ const Login = () => {
 
         <p className="login-sub-text">
           카카오 계정으로 간편하게 시작하세요.
+        </p>
+        <div className="login-divider">
+          <span>먼저 써보고 싶다면</span>
+        </div>
+
+        <button
+          type="button"
+          className="guest-login-button"
+          onClick={guestLogin}>
+            <span>로그인 없이 체험하기</span>
+            <span aria-hidden="true">→</span>
+            </button>
+        <p className="guest-login-description">
+          체험 중에는 이전 대화를 기억하지 않으며,
+          <br />
+          새로고침하면 대화 내역이 사라져요.
         </p>
       </div>
     </div>

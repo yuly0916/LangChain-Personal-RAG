@@ -34,7 +34,7 @@ function Home() {
         prevScrollHeightRef.current = containerRef.current.scrollHeight;
       }
 
-      const res = await api.get(`/api/chat?page=${pageNum}&limit=${페이징사이즈}`);
+      const res = await api.get(`/chat?page=${pageNum}&limit=${페이징사이즈}`);
 
       const chatList = Array.isArray(res.data) ? res.data : [];
 
@@ -63,7 +63,7 @@ function Home() {
 
   const 전문AI모델가져오기 = async () => {
     try {
-      const res = await api.get("/api/chat/models");
+      const res = await api.get("/chat/models");
 
       const modelList = Array.isArray(res.data) ? res.data : [];
 
@@ -101,7 +101,7 @@ function Home() {
 
     try {
       const res = await api.post(
-        `/api/chat?model_name=${encodeURIComponent(selectedModel.name)}`,
+        `/chat?model_name=${encodeURIComponent(selectedModel.name)}`,
         currentInput
       );
 

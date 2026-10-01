@@ -1,10 +1,8 @@
 
-from langchain_core.messages import AIMessage
-from pymongo.synchronous.cursor import Cursor
 from pymongo.synchronous.database import Database
 
 from db import get_db
-from fastapi import APIRouter, Depends, Body, HTTPException
+from fastapi import APIRouter, Depends, Body, HTTPException, Request
 
 from response.dto import ModelDto, User, ChatResponseDto
 from routers.login_router import get_current_user
@@ -14,8 +12,8 @@ service = ChatService()
 
 
 @chat.post("")
-def chatting(model_name:str, text: str=Body(...), db:Database=Depends(get_db), user:User=Depends(get_current_user)):
-    return service.post_chat(model_name, text, db, user)
+def chatting(request: Request,model_name:str, text: str=Body(...), db:Database=Depends(get_db), user:User=Depends(get_current_user)):
+    return service.post_chat(model_name, text, db, user, request)
 
 
 @chat.get("", responses={400:{"description":"요청이 올바르지 않습니다. page는 0초과, limit은 100 미만이어야합니다."}})

@@ -22,7 +22,7 @@ CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
 LOGIN_SUCCESS_PAGE = os.environ.get('LOGIN_SUCCESS_PAGE')
 
 
-def create_token(name, profile_img, kakao_user_id, role="user"):
+def create_token(name, profile_img, kakao_user_id,login_type, role="user"):
     """
     티켓 발행 하는 함수
     """
@@ -31,6 +31,7 @@ def create_token(name, profile_img, kakao_user_id, role="user"):
         "profile_img": profile_img,
         "user_k_id": kakao_user_id,
         "role": role,
+        "login_type":login_type,
         "exp": datetime.datetime.now() + datetime.timedelta(hours=1),
         "iat": datetime.datetime.now()
     }
@@ -42,16 +43,6 @@ class KakaoAccessTokenResponseException(Exception):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
-    if token == "test":     # 개발용 테스트 코드
-        payload =   {
-            "name": "진",
-            "profile_img": "http://img1.kakaocdn.net/thumb/R640x640.q70/?fname=http://t1.kakaocdn.net/account_images/default_profile.jpeg",
-            "user_k_id": 4828258961,
-            "role": "admin",
-            "exp": datetime.datetime.now() + datetime.timedelta(hours=1),
-            "iat": datetime.datetime.now()
-        }
-        return User(**payload)
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return User(**payload)
@@ -59,7 +50,21 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 @login.get("/login/redirect")
-def kakao_login_redirect(db=Depends(get_db), code: str | None = None, error: str | None=None, error_description:str|None=None):
+def kakao_login_redirect(db=Depends(get_db), code: str | None = None, error: str | None=None, error_description:str|None=None, mode:str | None=None):
+    if mode == "guest":
+        token = create_token(
+            kakao_user_id=None,
+            name = "guest",
+            profile_img=None,
+            role= "user",
+            login_type=0
+        )
+        res = RedirectResponse(url=LOGIN_SUCCESS_PAGE)
+        res.set_cookie(
+            key="jwt_token",
+            value=token
+        )
+        return res
     data = {
         "grant_type": "authorization_code",
         "client_id": CLIENT_ID,
@@ -104,7 +109,8 @@ def kakao_login_redirect(db=Depends(get_db), code: str | None = None, error: str
             name=user.get("name") or user_detail.get("nickname"), 
             profile_img=user.get("profile_img") or user_detail.get("profile_image"), 
             kakao_user_id=user.get("user_k_id"),
-            role=user.get("role", "user")
+            role=user.get("role", "user"),
+            login_type=1
         )
         # --end
 
